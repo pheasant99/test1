@@ -43,7 +43,8 @@ class	ExcelCell
 class	excel2pdf
 {
 	public	$errMessage		= '';
-	public	static	$POINT	= 0.3528;			//1ポイントの長さ(mm)
+	public	static	$COEFF	= 25.4;			//長さ(mm)の係数 point:0.3528 インチ:0.3937/25.4
+	public	static	$POINT	= 0.3528;
 	//PDF
 	private	static $fontTbl	= array();			//使用するフォント達
 	private	$pdfFileName	= 'sheet.pdf';		//出力PDFファイル名
@@ -158,29 +159,36 @@ class	excel2pdf
 		$fill		= false;
 		$stretch	= 0;			//テキストの伸縮モード
 		$valign		= 'T';			//縦方向の位置
-		if($cell->bdrtop[0]!='none')	$border .= 'T';
+		if($cell->bdrtop[0]   !='none')	$border .= 'T';
 		if($cell->bdrbottom[0]!='none')	$border .= 'B';
-		if($cell->bdrleft[0]!='none')	$border .= 'L';
-		if($cell->bdrright[0]!='none')	$border .= 'R';
+		if($cell->bdrleft[0]  !='none')	$border .= 'L';
+		if($cell->bdrright[0] !='none')	$border .= 'R';
 		
 		if($cell->HAlignment=='right')	$align = 'R';
 		if($cell->HAlignment=='center')	$align = 'C';
 
-		if($cell->VAlignment=='center')	$align = 'M';
-		if($cell->VAlignment=='bottom')	$align = 'B';
+		if($cell->VAlignment=='center')	$valign = 'M';
+		if($cell->VAlignment=='bottom')	$valign = 'B';
 		
 		if((!empty($border))||(!empty($cell->strVal))) {
 			//ボックスの左上
 			$this->tcpdf->SetXY( $cell->posx, $cell->posy, true);
 			$this->tcpdf->SetFont('kozminproregular','',$cell->FontSize);
-			//ボックス（セル）の描画
-			$this->tcpdf->Cell( $cell->width, $cell->height, $cell->strVal,		//サイズ、文字列
-								$border, 0, $align, $fill, '', $stretch, true, 'T', $valign );
+			if(empty($cell->wrapText) ) {
+				//ボックス（セル）の描画
+				$this->tcpdf->Cell( $cell->width, $cell->height, $cell->strVal,		//サイズ、文字列
+									$border, 0, $align, $fill, '', $stretch, true, 'T', $valign );
+			}
+			else {
+				$this->tcpdf->MultiCell( $cell->width, $cell->height, $cell->strVal,		//サイズ、文字列
+									$border, $align, $fill, 0, $cell->posx, $cell->posy,
+									true, $stretch, false, true, 0, $valign, false );
+			}
 		}
 	}
 	//-------------------------------------------------
 	/**
-		セルの確認（デバッグ用）
+		★セルの確認（デバッグ用）
 		@param	$c,$r	セル位置
 		@return	なし
 	*/
@@ -201,12 +209,18 @@ class	excel2pdf
 				echo "<br>座標　X:{$cell->posx}  Y:{$cell->posy}";
 				echo "<br>サイズX:{$cell->width}  Y:{$cell->height}";
 				echo "<br>データ　:{$cell->strVal}";
-				echo "<br>フォント:{$cell->Font}　　size:{$cell->FontSize}";
+				echo "<br>フォント:{$cell->Font}　　size:{$cell->FontSize} wrap:{$cell->wrapText}";
+				echo "<br>罫線 上下:{$cell->bdrtop[0]} {$cell->bdrbottom[0]}";
+				echo "<br>罫線 左右:{$cell->bdrleft[0]} {$cell->bdrright[0]}";
 				echo "<br>";
 			}
 			else {
 				echo "<br>行：${r} カラム:${c} セル無し<br>";
 			}
+		}
+		else {
+			echo "<br>余白　　top:{$this->margentop}　　left:{$this->margenleft}";
+			echo "<br>倍率　　{$this->recio}<br>";
 		}
 	}
 	//-------------------------------------------------
@@ -309,17 +323,24 @@ class	excel2pdf
 		$this->eprow	= $e[0];	//開始カラム
 		$this->epclm	= $e[1];	//終了カラム
 		//印刷倍率
-		$this->scale	= $this->sheet->getPageSetup()->getScale();
-		$this->recio	= $this->scale / 100.0;
+		$scale	= $this->sheet->getPageSetup()->getScale();
+		$this->recio	= $scale / 100.0;
 		//マージン（単位は？）
-		$this->margentop	= $this->sheet->getPageMargins()->getTop();
-		$this->margenleft	= $this->sheet->getPageMargins()->getLeft();
+		$this->margentop	= $this->sheet->getPageMargins()->getTop()  * excel2pdf::$COEFF;
+		$this->margenleft	= $this->sheet->getPageMargins()->getLeft() * excel2pdf::$COEFF;
 		
 		//カラムサイズ
 		$this->sheet->calculateColumnWidths();			/* ???  */
 		$def	= $this->sheet->getDefaultColumnDimension();
 		$defw	= $def->getWidth();
-		if($defw<=0) $defw = $this->clmWidthPt[0];
+		if($defw<=0) {
+			if(isset($this->clmWidthPt[0])) {
+				$defw	= $this->clmWidthPt[0];
+			}
+			else {
+				$defw	= \PhpOffice\PhpSpreadsheet\Shared\Drawing::pixelsToPoints(72);	//デフォルトの幅
+			}
+		}
 		$w		= 0.0;
 		$w		= $this->margenleft;		//余白
 		
@@ -383,7 +404,9 @@ class	excel2pdf
 						$this->cells[$r][$c]	= $ec;
 					}
 					else {
-						$this->cells[$r][$c]	= null;
+						$ec	= $this->getExcelCell($r,$c,$cell,'');
+						$this->cells[$r][$c]	= $ec;
+					//	$this->cells[$r][$c]	= null;
 					}
 				}
 				else {
@@ -434,7 +457,7 @@ class	excel2pdf
 		//フォント情報
 		$f	= $style->getFont();
 		$ec->Font			= $f->getName();
-		$ec->FontSize		= $f->getSize() * excel2pdf::$POINT;
+		$ec->FontSize		= $f->getSize();	// * excel2pdf::$POINT;
 		$ec->bold			= $f->getBold();
 		$ec->italic			= $f->getItalic();
 		$ec->superscript	= $f->getSuperscript();

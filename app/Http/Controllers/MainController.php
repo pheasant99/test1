@@ -14,27 +14,38 @@ class MainController extends Controller
 		$book	= $reader->load('C:/Users/matsumoto/Documents/業務\ララベル/test1/storage/app/public/test.xlsx');
 		
 		$cw	= array();
-		$cw[1]	= 118;
-		$cw[2]	= 100;
-		$cw[3]	=  42;
-		$cw[4]	=  27;
-		$cw[5]	= 132;
+/*		$cw[1]	= 118 * 1.1;
+		$cw[2]	= 100 * 1.1;
+		$cw[3]	=  42 * 1.1;
+		$cw[4]	=  27 * 1.1;
+		$cw[5]	= 132 * 1.1;
+*/
+		$cw[1]	= 118 * 1.1;
+		$cw[2]	= 206 * 1.1;
+		$cw[3]	=  73 * 1.1;
+		$cw[4]	=  58 * 1.1;
+		$cw[5]	=  18 * 1.1;
+		$cw[6]	=  43 * 1.1;
+		$cw[7]	=  28 * 1.1;
+		$cw[8]	= 175 * 1.1;
 		$ex->setColumnWidthsPx($cw);
 		
 		$sheet	=null;
 		if($book != null) {
 			// シートが1枚の場合
 			$sheet = $book->getSheet(0);
+			
+			$sheet->setCellValue('C18', 1500);
 		}
 		if($sheet != null) {
 			$ex->setSheet($sheet);
 			$ex->writePDF();
-		/*	
-			var_dump($ex->clmWidthPt);		//カラム幅の初期値
-			echo "<br><br>";
-			$ex->debugCell(0,0);		//カラム幅、行高さの出力
-		/*	* /
-			for($r=1;$r<4;$r++) {
+		/*	*/
+		//	var_dump($ex->clmWidthPt);		//カラム幅の初期値
+		//	echo "<br><br>";
+		//	$ex->debugCell(0,0);		//カラム幅、行高さの出力
+		/*	*/
+			for($r=1;$r<7;$r++) {
 				for($c=1;$c<6;$c++) {
 					$ex->debugCell($c,$r);
 				}
