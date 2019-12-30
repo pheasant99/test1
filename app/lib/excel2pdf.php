@@ -15,16 +15,19 @@ class	ExcelCell
 	public	$height;
 	
 	public	$strVal;
+	public	$bgcolor;			//背景色
+	public	$bgcolor2;			//背景色
+	public	$filltype;			//bool ::FILL_SOLIDの時true
 	
 	public	$Font;				//フォント名
 	public	$FontSize;			//フォントサイズ(mm)
-	public	$bold;				//Bool	
-	public	$italic;			//Bool	
+	public	$bold;				//Bool	ボールド
+	public	$italic;			//Bool	イタリック
 	public	$superscript;		//Bool	上付き
 	public	$subscript;			//Bool	添え字
 	public	$underline;			//Str	下線
  	public	$strikethrough;		//Bool	取消線
-	public	$color;				//Str？？
+	public	$color;				//Str
 	
 	public	$HAlignment;		//str	
 	public	$VAlignment;		//str	
@@ -36,24 +39,33 @@ class	ExcelCell
 	public	$bdrbottom;
 	public	$bdrleft;
 	public	$bdrright;
+	
+	public	$dwork;
 }
 //=======================================
 /**
-*/
+ */
 class	excel2pdf
 {
 	public	$errMessage		= '';
 	public	static	$COEFF	= 25.4;			//長さ(mm)の係数 point:0.3528 インチ:0.3937/25.4
 	public	static	$POINT	= 0.3528;
 	//PDF
-	private	static $fontTbl	= array();			//使用するフォント達
+	private	static $fontTbl		= array();		//使用するフォント達
+	private	static $fontcorrTbl	= array(		//フォントの対応表
+					'游ゴシック'		=> 'kozgopromedium',
+					'Yu Gothic'			=> 'kozgopromedium',
+					'ＭＳ Ｐゴシック'	=> 'kozgopromedium',
+					'ＭＳ ゴシック'		=> 'kozgopromedium',
+					'ＭＳ Ｐ明朝'		=> 'kozminproregular',
+					'ＭＳ 明朝'			=> 'kozminproregular');
 	private	$pdfFileName	= 'sheet.pdf';		//出力PDFファイル名
 	private	$tcpdf			= null;
 	
 	//Excel
 	private	$excelFileName	= '';				//エクセルファイル名
 	private	$book			= null;				//ブックオブジェクト
-	private	$sheet			= null;				//シートオブジェクト
+	public	$sheet			= null;				//シートオブジェクト
 	
 	//PDF
 		//単位（mm）
@@ -74,34 +86,56 @@ class	excel2pdf
 	private	$margenleft;			//ページ余白
 	
 	private	$cells	= array();		//印刷範囲のセル情報
+	private	$draws	= array();		//図形群
 	public	$clmWidthPt= array();	//カラム幅の初期値（エクセルファイルから取得できない時用）
 
 	//-------------------------------------------------
-	/**
-		PDF出力で使用するフォント群を登録する
-		@param	$ftbl	フォントファイルの配列（順番が番号となる）
-		@return	TRUE/FLSE
-	*/
-	public static function setPdfFonts($ftbl)
+	//	コンストラクタ
+	function	__construct ()
 	{
-		//@@@@@@@@@@@@@@
+	//	$w	= \PhpOffice\PhpSpreadsheet\Shared\Drawing::pixelsToPoints(72);	//デフォルトの幅
+		$w	= 56;
+		for($i=1;$i<50;$i++) {
+			$this->clmWidthPt[$i]	= $w;
+		}
 	}
 	//-------------------------------------------------
 	/**
-		エクセルのフォントに対応するPDF用フォントを指定する。
-		@param	$font	エクセルのフォント名
-		@param	$id		対応するPDFフォントの番号（0～）
-		@return	なし
-	*/
-	public static function setUseFontNo($font,$id)
+	 *	PDF出力で使用するフォント群を登録する
+	 *	@param	$ftbl	フォントファイルの配列（順番が番号となる）
+	 *	@return	TRUE/FLSE
+	 */
+	public static function addUseFonts($ftbl)
 	{
-		//@@@@@@@@@@@@@@
+		excel2pdf::$fontTbl	= $ftbl;		//
 	}
 	//-------------------------------------------------
 	/**
-		出力するPDFファイル名を設定する
-		@param	$fn	ファイル名
-	*/
+	 *	エクセルのフォントに対応するPDF用フォントを指定する。
+	 *	@param	$wfont	エクセルのフォント名
+	 *	@param	$pfont	対応するPDFフォント名（gothic/mincho）
+	 *	@return	なし
+	 */
+	public static function setPdfFont($wfont,$pfont)
+	{
+		$pf	= mb_strtolower($pfont);
+		switch($pf) {
+		case 'ゴシック':
+		case 'gothic':
+			$pfont	= 'kozgopromedium';
+			break;
+		case '明朝':
+		case 'mincho':
+			$pfont	= 'kozminproregular';
+			break;
+		}
+		excel2pdf::$fontcorrTbl[$wfont]	= $pfont;
+	}
+	//-------------------------------------------------
+	/**
+	 *	出力するPDFファイル名を設定する
+	 *	@param	$fn	ファイル名
+	 */
 	public function setPdfFilename($fn)
 	{
 		$this->pdfFileName	= $fn;
@@ -118,27 +152,32 @@ class	excel2pdf
 	
 	//-------------------------------------------------
 	/**
-		PDFファイル出力する
-		@return	なし
-	*/
+	 *	PDFファイル出力する
+	 *	@return	なし
+	 */
 	public function writePDF()
 	{
 		$this->tcpdf = new \TCPDF("P", "mm", "A4", true, "UTF-8" );
 		// 出力するPDFの初期設定
 	//	$this->tcpdf = new TcpdfFpdi('L', 'mm', 'A4');
+		//使用するフォント
+		//@@@@@@@
 		$this->tcpdf->setPrintHeader( false );    
 		$this->tcpdf->setPrintFooter( false );
 		$this->tcpdf->AddPage();
-		$this->tcpdf->SetFont('kozminproregular','',14);
+		$this->tcpdf->SetFont('kozgopromedium','',14);		//小塚ゴシック
+//		$this->tcpdf->SetFont('kozminproregular','',14);	//小塚明朝
+//		$this->tcpdf->SetFont('msungstdlight','',14);
+//		$this->tcpdf->SetFont('stsongstdlight','',14);
 		
 		for($r=$this->sprow;$r<=$this->eprow; $r++) {
 			for($c=$this->spclm; $c<=$this->epclm; $c++) {
 				//セルの取得
 				if(!empty($this->cells[$r][$c])) {
 					$cell	= $this->cells[$r][$c];
-					if(!empty($cell)) {
+				//	if(!empty($cell)) {
 						$this->writeCell($cell);
-					}
+				//	}
 				}
 			}
 		}
@@ -148,50 +187,206 @@ class	excel2pdf
 	}
 	//-------------------------------------------------
 	/**
-		PDFにセルを出力する
-		@param	$cell	セル情報
-		@return	なし
-	*/
+	 *	PDFにセルを出力する
+	 *	@param	$cell	セル情報
+	 *	@return	なし
+	 */
 	public function writeCell($cell)
 	{
 		$border		= '';			//枠線（後で作り変える？線種対応）
 		$align		= 'L';			//横方向の位置
-		$fill		= false;
+		$fill		= $cell->filltype;
 		$stretch	= 0;			//テキストの伸縮モード
-		$valign		= 'T';			//縦方向の位置
+		$valign		= 'M';			//縦方向の位置
 		if($cell->bdrtop[0]   !='none')	$border .= 'T';
 		if($cell->bdrbottom[0]!='none')	$border .= 'B';
 		if($cell->bdrleft[0]  !='none')	$border .= 'L';
 		if($cell->bdrright[0] !='none')	$border .= 'R';
 		
+		if($cell->HAlignment=='left')	$align = 'L';
 		if($cell->HAlignment=='right')	$align = 'R';
 		if($cell->HAlignment=='center')	$align = 'C';
 
+		if($cell->VAlignment=='top')	$valign = 'T';
 		if($cell->VAlignment=='center')	$valign = 'M';
 		if($cell->VAlignment=='bottom')	$valign = 'B';
 		
-		if((!empty($border))||(!empty($cell->strVal))) {
-			//ボックスの左上
-			$this->tcpdf->SetXY( $cell->posx, $cell->posy, true);
-			$this->tcpdf->SetFont('kozminproregular','',$cell->FontSize);
+	//	$fill		= false;
+		if((!empty($border))||(!empty($cell->strVal))||($fill)) {
+			//フォントの指定
+			if(strlen($cell->color)==6) {
+				$col	= '#'.$cell->color;
+				$cr	= 255-hexdec(substr($col, 1, 2));
+				$cg	= 255-hexdec(substr($col, 3, 2));
+				$cb	= 255-hexdec(substr($col, 5, 2));
+				$this->tcpdf->SetTextColor($cr,$cg,$cb,0);
+			}
+		//	else {
+		//		$this->tcpdf->SetTextColor(255,255,255,0);
+		//	}
+			$fntnm	= $this->getFontName($cell->Font);		//フォント
+			$style	= $this->getFontStyle($cell);
+			$fntsiz	= $cell->FontSize * $this->recio;
+			$posx	= $cell->posx   * $this->recio;
+			$posy	= $cell->posy   * $this->recio;
+			$width	= $cell->width  * $this->recio;
+			$height	= $cell->height * $this->recio;
+			if($fill) {		//セルの色
+				$col	= '#'.$cell->bgcolor;
+				$cr	= 255-hexdec(substr($col, 1, 2));
+				$cg	= 255-hexdec(substr($col, 3, 2));
+				$cb	= 255-hexdec(substr($col, 5, 2));
+				$this->tcpdf->SetFillColor($cr,$cg,$cb,0);
+			}
+			$stretch	= 0;
+			if($cell->shrinkToFit) {
+				$stretch	= 1;
+			}
+			$this->tcpdf->SetXY( $posx, $posy, true);
+			$this->tcpdf->SetFont($fntnm,$style,$fntsiz);
+			//罫線を別に描画する
+			if(!empty($border)) {
+				$this->drawBorder($cell, $cell->bdrtop[0], $cell->bdrtop[1],			//上
+									$posx, $posy, $posx+$width, $posy);
+				$this->drawBorder($cell, $cell->bdrbottom[0], $cell->bdrbottom[1],		//下
+									$posx, $posy+$height, $posx+$width, $posy+$height);
+				$this->drawBorder($cell, $cell->bdrleft[0], $cell->bdrleft[1],			//左
+									$posx, $posy, $posx, $posy+$height);
+				$this->drawBorder($cell, $cell->bdrright[0], $cell->bdrright[1],		//右
+									$posx+$width, $posy, $posx+$width, $posy+$height);
+				$border	= '';
+			}
 			if(empty($cell->wrapText) ) {
 				//ボックス（セル）の描画
-				$this->tcpdf->Cell( $cell->width, $cell->height, $cell->strVal,		//サイズ、文字列
-									$border, 0, $align, $fill, '', $stretch, true, 'T', $valign );
+				$strVal = $cell->strVal;
+				if($align == 'L') $strVal = str_repeat('  ', $cell->indent) . $cell->strVal;
+				if($align == 'R') $strVal = $cell->strVal . str_repeat('  ', $cell->indent);
+				$this->tcpdf->Cell( $width, $height, $strVal,		//サイズ、文字列
+									$border, $stretch, $align, $fill, '', $stretch, true, 'T', $valign );
 			}
 			else {
-				$this->tcpdf->MultiCell( $cell->width, $cell->height, $cell->strVal,		//サイズ、文字列
-									$border, $align, $fill, 0, $cell->posx, $cell->posy,
+				//マルチライン
+				$this->tcpdf->MultiCell( $width, $height, $cell->strVal,		//サイズ、文字列
+									$border, $align, $fill, 0, $posx, $posy,
 									true, $stretch, false, true, 0, $valign, false );
 			}
 		}
 	}
+	
 	//-------------------------------------------------
 	/**
-		★セルの確認（デバッグ用）
-		@param	$c,$r	セル位置
-		@return	なし
-	*/
+	 *	フォント名の変換
+	 *	@param	$wf		Windowsのフォント名
+	 *	@return	pdfのフォント名
+	 */
+	public function getFontName($wf)
+	{
+		$ret	= '';	// 'kozgopromedium';
+		if(isset(excel2pdf::$fontcorrTbl[$wf])) {
+			$ret	= excel2pdf::$fontcorrTbl[$wf];
+		}
+		else {
+			if(strpos($wf,'ゴシック')!==false) {
+				$ret	= 'kozgopromedium';
+			}
+			if(strpos($wf,'明朝')!==false) {
+				$ret	= 'kozminproregular';
+			}
+		}
+		return	$ret;
+	}
+	//-------------------------------------------------
+	/**
+	 *	フォントスタイル
+	 *	@param	$cell		セル情報
+	 *	@return	フォントのスタイル文字列
+	 */
+	public function getFontStyle($cell)
+	{
+		$ret	= '';
+		if($cell->bold)			$ret .= 'B';
+		if($cell->italic)		$ret .= 'I';
+		if($cell->strikethrough)$ret .= 'D';
+		if($cell->underline!=\PhpOffice\PhpSpreadsheet\Style\Font::UNDERLINE_NONE) {
+								$ret .= 'U';
+		}
+		return	$ret;
+	}
+	//-------------------------------------------------
+	/**
+	 *	罫線の描画
+	 *	@param	$cell	セル情報
+	 *	@param	$sx...	座標
+	 *	@return	フォントのスタイル文字列
+	 */
+	public function drawBorder($cell,$style, $clr, $sx, $sy, $ex, $ey)
+	{
+		if($style !='none') {
+			$line['width']	= 0.2;			//
+			$line['cap']	= 'square';		//末端部：butt, round, square
+			$line['join']	= 'miter';		//結合部：miter, round, bevel
+			$line['dash']	= '';			//on,off
+			$line['phase']	= 0;			//破線の開始位置
+			$line['color']	= array('R'=>0,'G'=>0,'B'=>0);
+			if(strlen($clr)==6) {
+				$line['color']['R']	= hexdec(substr($clr, 1, 2));
+				$line['color']['G']	= hexdec(substr($clr, 3, 2));
+				$line['color']['B']	= hexdec(substr($clr, 5, 2));
+			}
+			switch($style) {
+			case \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_DASHDOT:		//一点鎖線
+				$line['dash']	= '2.0,0.5,0.5,0.5';		//on,off
+				break;
+			case \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_DASHDOTDOT:		//二点鎖線
+				$line['dash']	= '2.0,0.5,0.5,0.5,0.5,0.5';	//on,off
+				break;
+			case \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_DASHED:			//
+				$line['dash']	= '1.0,1.0';				//on,off
+				break;
+			case \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_DOTTED:			//
+				$line['dash']	= '0.7,0.7';				//on,off
+				break;
+			case \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_DOUBLE:			//二重線
+				$line['width']	= 1.5;						//太さ 
+				break;
+			case \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_HAIR:			//
+				$line['width']	= 0.1;						//太さ 
+				break;
+			case \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_MEDIUM:			//
+				$line['width']	= 0.5;						//太さ 
+				break;
+			case \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_MEDIUMDASHDOT:	//
+				$line['dash']	= '2.0,0.5,0.5,0.5';		//on,off
+				$line['width']	= 0.5;						//太さ 
+				break;
+			case \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_MEDIUMDASHDOTDOT:	//
+				$line['dash']	= '2.0,0.5,0.5,0.5,0.5,0.5';	//on,off
+				$line['width']	= 0.5;						//太さ 
+				break;
+			case \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_MEDIUMDASHED:		//
+				$line['dash']	= '1.5,1.0';				//on,off
+				$line['width']	= 0.5;				//太さ 
+				break;
+			case \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_SLANTDASHDOT:	//
+				//@@@@@@
+				break;
+			case \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THICK:			//
+				$line['width']	= 0.8;							//太さ 
+				break;
+			case \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN:			//直線
+				$line['width']	= 0.2;							//太さ 
+				break;
+			}
+			//ラインを引く
+			$this->tcpdf->Line($sx, $sy, $ex, $ey,$line);
+		}
+	}
+	//-------------------------------------------------
+	/**
+	 *	★セルの確認（デバッグ用）
+	 *	@param	$c,$r	セル位置
+	 *	@return	なし
+	 */
 	public function debugCell($c,$r)
 	{
 		if($c==0) {
@@ -209,9 +404,11 @@ class	excel2pdf
 				echo "<br>座標　X:{$cell->posx}  Y:{$cell->posy}";
 				echo "<br>サイズX:{$cell->width}  Y:{$cell->height}";
 				echo "<br>データ　:{$cell->strVal}";
-				echo "<br>フォント:{$cell->Font}　　size:{$cell->FontSize} wrap:{$cell->wrapText}";
+				echo "<br>フォント:{$cell->Font}　　size:{$cell->FontSize} wrap:{$cell->wrapText} 色:{$cell->color}";
 				echo "<br>罫線 上下:{$cell->bdrtop[0]} {$cell->bdrbottom[0]}";
 				echo "<br>罫線 左右:{$cell->bdrleft[0]} {$cell->bdrright[0]}";
+				echo "<br>セル 背景:{$cell->bgcolor} {$cell->bgcolor2} {$cell->filltype}";
+				echo "<br>結合:{$cell->dwork}";
 				echo "<br>";
 			}
 			else {
@@ -225,12 +422,12 @@ class	excel2pdf
 	}
 	//-------------------------------------------------
 	/**
-		カラム幅をピクセル値の配列で設定する
-		@param	$wa	カラム幅(px)の配列（1～）
-	*/
+	 *	カラム幅をピクセル値の配列で設定する
+	 *	@param	$wa	カラム幅(px)の配列（1～）
+	 */
 	public function setColumnWidthsPx($wa)
 	{
-		$this->clmWidthPt[0]	= \PhpOffice\PhpSpreadsheet\Shared\Drawing::pixelsToPoints(72);	//デフォルトの幅
+		$this->clmWidthPt[0]	= \PhpOffice\PhpSpreadsheet\Shared\Drawing::pixelsToPoints(172);	//デフォルトの幅
 		foreach($wa as $i => $v){
 			$v	= \PhpOffice\PhpSpreadsheet\Shared\Drawing::pixelsToPoints($v);
 			$this->clmWidthPt[$i]	= $v;
@@ -238,16 +435,34 @@ class	excel2pdf
 	}
 	//-------------------------------------------------
 	/**
-		エクセルファイル名を設定する
-		@param	$fn	ファイル名
-	*/
+	 *	カラム幅をmm値の配列で設定する
+	 *	@param	$wa	カラム幅(mm)の配列（1～）
+	 */
+	public function setColumnWidthsmm($wa)
+	{
+		foreach($wa as $i => $v){
+			$this->clmWidthPt[$i]	= $v / excel2pdf::$POINT;
+		}
+	}
+	//-------------------------------------------------
+	/**
+	 *	エクセルファイル名を設定する
+	 *	@param	$fn	ファイル名
+	 */
 	public function setExcelFilename($fn)
 	{
 		//ファイルがあるか？
 		if(file_exists($fn)) {
+			$ext = pathinfo($fn, PATHINFO_EXTENSION);
 			$this->excelFileName	= $fn;
 			//エクセルファイルを読込む
-			$reader	= new \PhpOffice\PhpSpreadsheet\Reader\Xlsx();
+			if($ext=='xlsx') {
+				$reader	= new \PhpOffice\PhpSpreadsheet\Reader\Xlsx();
+			}
+			else {
+				$reader	= new \PhpOffice\PhpSpreadsheet\Reader\Xls();
+			}
+			$reader->setIncludeCharts(true);
 			$book	= $reader->load($fn);
 			$this->setBook($book);
 		}
@@ -257,18 +472,18 @@ class	excel2pdf
 	}
 	//-------------------------------------------------
 	/**
-		エクセルファイル名を取得する
-		@return	ファイル名
-	*/
+	 *	エクセルファイル名を取得する
+	 *	@return	ファイル名
+	 */
 	public function getExcelFilename()
 	{
 		return	$this->excelFileName;
 	}
 	//-------------------------------------------------
 	/**
-		エクセルブックを設定する
-		@param	$book	ファイル名
-	*/
+	 *	エクセルブックを設定する
+	 *	@param	$book	ファイル名
+	 */
 	public function setBook($book)
 	{
 		$this->book	= $book;
@@ -278,18 +493,18 @@ class	excel2pdf
 	}
 	//-------------------------------------------------
 	/**
-		エクセルブックを取得する
-		@return	エクセルブック
-	*/
+	 *	エクセルブックを取得する
+	 *	@return	エクセルブック
+	 */
 	public function getBook()
 	{
 		return	$this->book;
 	}
 	//-------------------------------------------------
 	/**
-		エクセルシートを設定する
-		@param	$sheet	エクセルシート
-	*/
+	 *	エクセルシートを設定する
+	 *	@param	$sheet	エクセルシート
+	 */
 	public function setSheet($sheet)
 	{
 		//シートを保持
@@ -301,17 +516,17 @@ class	excel2pdf
 	}
 	//-------------------------------------------------
 	/**
-		エクセルシートを取得する
-		@return	エクセルシート
-	*/
+	 *	エクセルシートを取得する
+	 *	@return	エクセルシート
+	 */
 	public function getSheet()
 	{
 		return	$this->sheet;
 	}
 	//-------------------------------------------------
 	/**
-		エクセルシートからセルの情報を読取る
-	*/
+	 *	エクセルシートからセルの情報を読取る
+	 */
 	public function loadCells()
 	{
 		//印刷範囲を内部に設定
@@ -326,8 +541,8 @@ class	excel2pdf
 		$scale	= $this->sheet->getPageSetup()->getScale();
 		$this->recio	= $scale / 100.0;
 		//マージン（単位は？）
-		$this->margentop	= $this->sheet->getPageMargins()->getTop()  * excel2pdf::$COEFF;
-		$this->margenleft	= $this->sheet->getPageMargins()->getLeft() * excel2pdf::$COEFF;
+		$this->margentop	= ($this->sheet->getPageMargins()->getTop()  * excel2pdf::$COEFF) / $this->recio;
+		$this->margenleft	= ($this->sheet->getPageMargins()->getLeft() * excel2pdf::$COEFF) / $this->recio;
 		
 		//カラムサイズ
 		$this->sheet->calculateColumnWidths();			/* ???  */
@@ -338,9 +553,10 @@ class	excel2pdf
 				$defw	= $this->clmWidthPt[0];
 			}
 			else {
-				$defw	= \PhpOffice\PhpSpreadsheet\Shared\Drawing::pixelsToPoints(72);	//デフォルトの幅
+				$defw	= \PhpOffice\PhpSpreadsheet\Shared\Drawing::pixelsToPoints(172);	//デフォルトの幅
 			}
 		}
+		$defw	/= $this->recio;
 		$w		= 0.0;
 		$w		= $this->margenleft;		//余白
 		
@@ -359,7 +575,7 @@ class	excel2pdf
 			}
 			if( $vv<=0 ) {
 				if( isset($this->clmWidthPt[$i])) {
-					$vv	= $this->clmWidthPt[$i];
+					$vv	= $this->clmWidthPt[$i] / $this->recio;
 				}
 				else {
 					$vv	= $defw;
@@ -390,41 +606,55 @@ class	excel2pdf
 			$w	+= $v;
 		}
 		//印刷範囲のセルの情報を取得、nullは結合セルなど
-	//	$this->cells	= array();				//印刷範囲のセル情報
+		$this->cells	= array();				//印刷範囲のセル情報
 		for($r=$this->sprow;$r<=$this->eprow; $r++) {
 			for($c=$this->spclm; $c<=$this->epclm; $c++) {
-				//セルの取得
-				$cell	= $this->sheet->getCellByColumnAndRow($c,$r,false);
-				if($cell!=null) {
-					$mg		= $cell->isMergeRangeValueCell();	//代表セル
-					$marge	= $cell->getMergeRange();			//結合範囲　　結合してなければ空
-					if(($mg==1) || empty($marge)) {				//生きているセル
-						$ec	= $this->getExcelCell($r,$c,$cell,$marge);
-						
-						$this->cells[$r][$c]	= $ec;
-					}
-					else {
-						$ec	= $this->getExcelCell($r,$c,$cell,'');
-						$this->cells[$r][$c]	= $ec;
-					//	$this->cells[$r][$c]	= null;
-					}
-				}
-				else {
+				if(isset($this->cells[$r][$c])) {
 					$this->cells[$r][$c]	= null;
 				}
+				else {
+					//セルの取得
+					$cell	= $this->sheet->getCellByColumnAndRow($c,$r,false);
+					if($cell!=null) {
+						$mg		= $cell->isMergeRangeValueCell();	//代表セル
+						$marge	= $cell->getMergeRange();			//結合範囲　　結合してなければ空
+						if(($mg==1) || empty($marge)) {				//生きているセル
+							$ec	= $this->getExcelCell($r,$c,$cell,$marge);
+							
+							$this->cells[$r][$c]	= $ec;
+						}
+						else {
+							$ec	= $this->getExcelCell($r,$c,$cell,'');
+							$this->cells[$r][$c]	= $ec;
+						//	$this->cells[$r][$c]	= null;
+						}
+					}
+					else {
+						$this->cells[$r][$c]	= null;
+					}
+				}
 			}
+		}
+		//図形
+		$this->draws	= array();
+		$garr	= $this->sheet->getDrawingCollection();		//図形が取得出来ないよ
+		foreach($garr as $obj){
+			$nm	= $obj->getName();
+			$cn	= $obj->getCoordinates();
+			$x	= $obj->getOffsetX();
+			$y	= $obj->getOffsetY();
 		}
 	}
 	
 	//-------------------------------------------------
 	/**
-		セルの情報を取得する
-		@param	$r		行番号
-		@param	$c		カラム番号
-		@param	$cell	PhpSpreadsheetのセルオブジェクト
-		@param	$㎎		結合セルの範囲
-		@return	ExcelCellクラスのインスタンス
-	*/
+	 *	セルの情報を取得する
+	 *	@param	$r		行番号
+	 *	@param	$c		カラム番号
+	 *	@param	$cell	PhpSpreadsheetのセルオブジェクト
+	 *	@param	$㎎		結合セルの範囲
+	 *	@return	ExcelCellクラスのインスタンス
+	 */
 	public function getExcelCell($r,$c,$cell,$mg)
 	{
 		$ec	= new ExcelCell();
@@ -434,12 +664,18 @@ class	excel2pdf
 		//左上座標
 		$ec->posx	= $this->cpos[$c];
 		$ec->posy	= $this->rpos[$r];
+		$ec->dwork	= $mg;
 		if(empty($mg)) {
 			$ec->width	= $this->csize[$c];
 			$ec->height	= $this->rsize[$r];
 		}
 		else {
 			$ar	= excel2pdf::area2index($mg);		//結合範囲の合計
+			for($ci=$ar['sp'][1]; $ci<=$ar['ep'][1] ;$ci++ ) {
+				for($ri=$ar['sp'][0]; $ri<=$ar['ep'][0] ;$ri++ ) {
+					$this->cells[$ri][$ci]	= 1;	//null;
+				}
+			}
 			$w	= 0.0;
 			for($i=$ar['sp'][1]; $i<=$ar['ep'][1] ;$i++ ) {
 				$w	+= $this->csize[$i];
@@ -451,9 +687,20 @@ class	excel2pdf
 				$w	+= $this->rsize[$i];
 			}
 			$ec->height	= $w;
+			//
+			if($c!=$ar['sp'][1]) {
+				return	null;
+			}
 		}
 		
 		$style	= $cell->getStyle();
+		//セル
+		$Fill	= $style->getFill();
+		$bgclr	= $Fill->getStartColor();
+		$ec->bgcolor		= $bgclr->getRGB();
+		$bgclr	= $Fill->getEndColor();
+		$ec->bgcolor2		= $bgclr->getRGB();
+		$ec->filltype		= $Fill->getFillType()==\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID;
 		//フォント情報
 		$f	= $style->getFont();
 		$ec->Font			= $f->getName();
@@ -478,44 +725,47 @@ class	excel2pdf
 		$b	= $style->getBorders();
 		$k	= $b->getTop();					//上
 		$ec->bdrtop[0]		= $k->getBorderStyle();
-		$ec->bdrtop[1]		= $k->getColor();
+		$ec->bdrtop[1]		= $k->getColor()->getRGB();
 		$k	= $b->getBottom();			//下
 		$ec->bdrbottom[0]	= $k->getBorderStyle();
-		$ec->bdrbottom[1]	= $k->getColor();
+		$ec->bdrbottom[1]	= $k->getColor()->getRGB();
 		$k	= $b->getLeft();			//左
 		$ec->bdrleft[0]		= $k->getBorderStyle();
-		$ec->bdrleft[1]		= $k->getColor();
+		$ec->bdrleft[1]		= $k->getColor()->getRGB();
 		$k	= $b->getRight();			//右
 		$ec->bdrright[0]	= $k->getBorderStyle();
-		$ec->bdrright[1]	= $k->getColor();
+		$ec->bdrright[1]	= $k->getColor()->getRGB();
 		
 		return	$ec;
 	}
 	
 	//-------------------------------------------------
 	/**
-		エリアを表す文字列からカラム・ロウの
-		インデックス値(1～)へ変換する。
-	
-		@param	$area	セル範囲を表す文字列 ex)'B1:G12'
-		@return	セル範囲を表す連想配列 $ret= ['sp'=>(行、列)、'ep'=>(行、列)]
-	*/
+	 *	エリアを表す文字列からカラム・ロウの
+	 *	インデックス値(1～)へ変換する。
+	 *
+	 *	@param	$area	セル範囲を表す文字列 ex)'B1:G12'
+	 *	@return	セル範囲を表す連想配列 $ret= ['sp'=>(行、列)、'ep'=>(行、列)]
+	 */
 	public static function area2index($area)
 	{
-		$p	= explode(':',$area);
-		$sp	= excel2pdf::name2index($p[0]);
-		$ep	= excel2pdf::name2index($p[1]);
-		$ret	= array('sp'=>$sp,'ep'=>$ep);
+		$ret	= array('sp'=>array(0,0),'ep'=>array(0,0));
+		if(!empty($area)) {
+			$p	= explode(':',$area);
+			$sp	= excel2pdf::name2index($p[0]);
+			$ep	= excel2pdf::name2index($p[1]);
+			$ret	= array('sp'=>$sp,'ep'=>$ep);
+		}
 		return $ret;
 	}
 
 	//-------------------------------------------------
 	/**
-		セル位置を表す文字列から行・列番号へ変換する
-	
-		@param	$cn	セル位置の文字列 ex)'C4'
-		@return	セル位置のインデックスを表す配列 $ret=（0:行、1:列）
-	*/
+	 *	セル位置を表す文字列から行・列番号へ変換する
+	 *
+	 *	@param	$cn	セル位置の文字列 ex)'C4'
+	 *	@return	セル位置のインデックスを表す配列 $ret=（0:行、1:列）
+	 */
 	public static function name2index($cn)
 	{
 		$cidx = $ridx = 0;
