@@ -4,9 +4,12 @@
  *-----------------------------------------------------------------------------*/
 namespace App\Lib;
 
+use \PhpOffice\PhpSpreadsheet\Worksheet\PageSetup;
+
 //=======================================
 /**
-*/
+ *	セル情報のクラス
+ */
 class	ExcelCell
 {
 	public	$posx;
@@ -44,6 +47,8 @@ class	ExcelCell
 }
 //=======================================
 /**
+ *	エクセルをPDFへ出力をサポートするクラス
+ *
  */
 class	excel2pdf
 {
@@ -65,13 +70,15 @@ class	excel2pdf
 	//Excel
 	private	$excelFileName	= '';				//エクセルファイル名
 	private	$book			= null;				//ブックオブジェクト
-	public	$sheet			= null;				//シートオブジェクト
+	private	$sheet			= null;				//シートオブジェクト
+	private	$defontsiz		= 12.0;				//
 	
 	//PDF
 		//単位（mm）
-		//用紙
-		//方向
 	//Excel
+	private	$orient	= 'L';			//方向
+	private	$pgsize	= 'A4';			//用紙
+	
 	private	$area	= '';			//印刷範囲
 	private	$spclm	= 0;
 	private	$sprow	= 0;
@@ -99,6 +106,7 @@ class	excel2pdf
 			$this->clmWidthPt[$i]	= $w;
 		}
 	}
+	
 	//-------------------------------------------------
 	/**
 	 *	PDF出力で使用するフォント群を登録する
@@ -109,6 +117,7 @@ class	excel2pdf
 	{
 		excel2pdf::$fontTbl	= $ftbl;		//
 	}
+	
 	//-------------------------------------------------
 	/**
 	 *	エクセルのフォントに対応するPDF用フォントを指定する。
@@ -131,6 +140,7 @@ class	excel2pdf
 		}
 		excel2pdf::$fontcorrTbl[$wfont]	= $pfont;
 	}
+	
 	//-------------------------------------------------
 	/**
 	 *	出力するPDFファイル名を設定する
@@ -140,6 +150,7 @@ class	excel2pdf
 	{
 		$this->pdfFileName	= $fn;
 	}
+	
 	//-------------------------------------------------
 	/**
 		出力するPDFファイル名を取得する
@@ -157,11 +168,11 @@ class	excel2pdf
 	 */
 	public function writePDF()
 	{
-		$this->tcpdf = new \TCPDF("P", "mm", "A4", true, "UTF-8" );
+		//TCPDF初期化
+		$this->tcpdf = new \TCPDF($this->orient, "mm", $this->pgsize, true, "UTF-8" );
+		
 		// 出力するPDFの初期設定
-	//	$this->tcpdf = new TcpdfFpdi('L', 'mm', 'A4');
 		//使用するフォント
-		//@@@@@@@
 		$this->tcpdf->setPrintHeader( false );    
 		$this->tcpdf->setPrintFooter( false );
 		$this->tcpdf->AddPage();
@@ -175,9 +186,7 @@ class	excel2pdf
 				//セルの取得
 				if(!empty($this->cells[$r][$c])) {
 					$cell	= $this->cells[$r][$c];
-				//	if(!empty($cell)) {
-						$this->writeCell($cell);
-				//	}
+					$this->writeCell($cell);
 				}
 			}
 		}
@@ -185,6 +194,7 @@ class	excel2pdf
 		$this->tcpdf->Output($this->pdfFileName, "I");
 		return;
 	}
+	
 	//-------------------------------------------------
 	/**
 	 *	PDFにセルを出力する
@@ -295,6 +305,7 @@ class	excel2pdf
 		}
 		return	$ret;
 	}
+	
 	//-------------------------------------------------
 	/**
 	 *	フォントスタイル
@@ -312,6 +323,7 @@ class	excel2pdf
 		}
 		return	$ret;
 	}
+	
 	//-------------------------------------------------
 	/**
 	 *	罫線の描画
@@ -381,6 +393,7 @@ class	excel2pdf
 			$this->tcpdf->Line($sx, $sy, $ex, $ey,$line);
 		}
 	}
+	
 	//-------------------------------------------------
 	/**
 	 *	★セルの確認（デバッグ用）
@@ -420,30 +433,45 @@ class	excel2pdf
 			echo "<br>倍率　　{$this->recio}<br>";
 		}
 	}
+	
 	//-------------------------------------------------
 	/**
 	 *	カラム幅をピクセル値の配列で設定する
 	 *	@param	$wa	カラム幅(px)の配列（1～）
 	 */
-	public function setColumnWidthsPx($wa)
+	public function setColumnWidthsPx($wa, $cot=10)
 	{
+		if(!is_array($wa)) {
+			if(!is_numeric($wa)) {
+				$wa	= 172;
+			}
+			$wa	= array_fill( 1, $cot, $wa );
+		}
 		$this->clmWidthPt[0]	= \PhpOffice\PhpSpreadsheet\Shared\Drawing::pixelsToPoints(172);	//デフォルトの幅
 		foreach($wa as $i => $v){
 			$v	= \PhpOffice\PhpSpreadsheet\Shared\Drawing::pixelsToPoints($v);
 			$this->clmWidthPt[$i]	= $v;
 		}
 	}
+	
 	//-------------------------------------------------
 	/**
 	 *	カラム幅をmm値の配列で設定する
 	 *	@param	$wa	カラム幅(mm)の配列（1～）
 	 */
-	public function setColumnWidthsmm($wa)
+	public function setColumnWidthsmm($wa, $cot=10)
 	{
+		if(!is_array($wa)) {
+			if(!is_numeric($wa)) {
+				$wa	= 11.0;
+			}
+			$wa	= array_fill( 1, $cot, $wa );
+		}
 		foreach($wa as $i => $v){
 			$this->clmWidthPt[$i]	= $v / excel2pdf::$POINT;
 		}
 	}
+	
 	//-------------------------------------------------
 	/**
 	 *	エクセルファイル名を設定する
@@ -470,6 +498,7 @@ class	excel2pdf
 			$errMessage	= 'File not Exist!! filename='.$fn;
 		}
 	}
+	
 	//-------------------------------------------------
 	/**
 	 *	エクセルファイル名を取得する
@@ -479,6 +508,7 @@ class	excel2pdf
 	{
 		return	$this->excelFileName;
 	}
+	
 	//-------------------------------------------------
 	/**
 	 *	エクセルブックを設定する
@@ -487,10 +517,17 @@ class	excel2pdf
 	public function setBook($book)
 	{
 		$this->book	= $book;
-		$sheet	= $book->getActiveSheet();
-		//シートを設定
-		$this->setSheet($sheet);
+		//デフォルトのスタイル（フォント）
+		$style	= $book->getDefaultStyle();
+		$f	= $style->getFont();
+		$this->defontsiz	= $f->getSize();
+		if(empty($this->sheet)) {
+			$sheet	= $book->getActiveSheet();
+			//シートを設定
+			$this->setSheet($sheet);
+		}
 	}
+	
 	//-------------------------------------------------
 	/**
 	 *	エクセルブックを取得する
@@ -500,6 +537,7 @@ class	excel2pdf
 	{
 		return	$this->book;
 	}
+	
 	//-------------------------------------------------
 	/**
 	 *	エクセルシートを設定する
@@ -507,13 +545,61 @@ class	excel2pdf
 	 */
 	public function setSheet($sheet)
 	{
+		if(empty($this->book)) {
+			$book	= $sheet->getParent();
+			$this->setBook($book);
+		}
 		//シートを保持
 		$this->sheet	= $sheet;
 		//印刷エリアの取得
-		$this->area		= $sheet->getPageSetup()->getPrintArea();
+		$page	= $sheet->getPageSetup();
+		$this->area	= $page->getPrintArea();
+		
+		//方向
+		$ori		= $page->getOrientation();
+		// PageSetup::ORIENTATION_LANDSCAPE
+		// PageSetup::ORIENTATION_PORTRAIT
+		if($ori==PageSetup::ORIENTATION_PORTRAIT) {
+			$this->orient	= 'P';
+		}
+		$siz		= $page->getPaperSize();
+		
+		switch($siz) {
+		case PageSetup::PAPERSIZE_LEGAL:
+			$this->pgsize	= 'LEGAL';
+			break;
+		case PageSetup::PAPERSIZE_LETTER:
+			$this->pgsize	= 'LETTER';
+			break;
+		case PageSetup::PAPERSIZE_A3:
+			$this->pgsize	= 'A3';
+			break;
+		case PageSetup::PAPERSIZE_A4:
+			$this->pgsize	= 'A4';
+			break;
+		case PageSetup::PAPERSIZE_A5:
+			$this->pgsize	= 'A5';
+			break;
+		case PageSetup::PAPERSIZE_B4:
+			$this->pgsize	= 'B4';
+			break;
+		case PageSetup::PAPERSIZE_B5:
+			$this->pgsize	= 'B5';
+			break;
+		}
+		//印刷倍率
+		$scale	= $page->getScale();
+		if($scale<=0.1) $scale = 100.0;			//念のため
+		$this->recio	= $scale / 100.0;
+		
+		//マージン（単位は？）
+		$this->margentop	= ($sheet->getPageMargins()->getTop()  * excel2pdf::$COEFF) / $this->recio;
+		$this->margenleft	= ($sheet->getPageMargins()->getLeft() * excel2pdf::$COEFF) / $this->recio;
+		
 		//セル群を読込む
 		$this->loadCells();
 	}
+	
 	//-------------------------------------------------
 	/**
 	 *	エクセルシートを取得する
@@ -523,6 +609,7 @@ class	excel2pdf
 	{
 		return	$this->sheet;
 	}
+	
 	//-------------------------------------------------
 	/**
 	 *	エクセルシートからセルの情報を読取る
@@ -537,37 +624,65 @@ class	excel2pdf
 		$this->spclm	= $s[1];	//終了行
 		$this->eprow	= $e[0];	//開始カラム
 		$this->epclm	= $e[1];	//終了カラム
-		//印刷倍率
-		$scale	= $this->sheet->getPageSetup()->getScale();
-		$this->recio	= $scale / 100.0;
-		//マージン（単位は？）
-		$this->margentop	= ($this->sheet->getPageMargins()->getTop()  * excel2pdf::$COEFF) / $this->recio;
-		$this->margenleft	= ($this->sheet->getPageMargins()->getLeft() * excel2pdf::$COEFF) / $this->recio;
 		
 		//カラムサイズ
-		$this->sheet->calculateColumnWidths();			/* ???  */
+	//	$this->sheet->calculateColumnWidths();			/* ???  */
 		$def	= $this->sheet->getDefaultColumnDimension();
-		$defw	= $def->getWidth();
-		if($defw<=0) {
+		$defw	= $def->getWidth() * $this->defontsiz / 2.0;			//11ポイント？
+/*	* /	if($defw<=0) {
 			if(isset($this->clmWidthPt[0])) {
 				$defw	= $this->clmWidthPt[0];
 			}
 			else {
-				$defw	= \PhpOffice\PhpSpreadsheet\Shared\Drawing::pixelsToPoints(172);	//デフォルトの幅
+	//			$defw	= \PhpOffice\PhpSpreadsheet\Shared\Drawing::pixelsToPoints(172);	//デフォルトの幅 pt
 			}
 		}
+*/
 		$defw	/= $this->recio;
 		$w		= 0.0;
 		$w		= $this->margenleft;		//余白
-		
+
 	//	for($i=$this->spclm; $i<=$this->epclm; $i++) {
 	//		if( isset($dims[$i]) ) {
 	//			$dims[$i]->setAutoSize(false);
 	//		}
 	//	}
 	//	$this->sheet->calculateColumnWidths();			/* ???  */
-		
+
+		//デフォルトのカラム幅
+		$v	= $defw * excel2pdf::$POINT;		//mm へ変換
+//		$v	= $defw;	// * excel2pdf::$POINT;		//mm へ変換
+// echo "defw =${v}<br>";
+		for($i=$this->spclm; $i<=$this->epclm; $i++) {
+			$this->csize[$i]	= $v;
+		}
+//echo "カラム幅mm<br>";
+//var_dump($this->csize);
+//echo "<br><br><br>";
+/* */
 		$dims	= $this->sheet->getColumnDimensions();
+		foreach ($dims as $ky => $ob) {
+			$i	= \PhpOffice\PhpSpreadsheet\Cell\Coordinate::columnIndexFromString($ky);
+			$v	= $ob->getWidth() * $this->defontsiz / 2.0 ;	//半角文字数からポイントへ
+			$v	= $v * excel2pdf::$POINT;		//mm へ変換
+			if($v>0.0) {
+				$this->csize[$i]	= $v;
+			}
+		}
+//echo "カラム幅mm<br>";
+//@var_dump($this->csize);
+//@echo "<br><br><br>";
+/* */
+		for($i=$this->spclm; $i<=$this->epclm; $i++) {
+			$v	= $this->csize[$i];
+			$this->cpos[$i]	= $w;
+			$w	+= $v;
+		}
+/* * /
+var_dump($this->cpos);
+echo "<br><br><br>";
+ exit();
+/*	* /	$dims	= $this->sheet->getColumnDimensions();
 		for($i=$this->spclm; $i<=$this->epclm; $i++) {
 			$vv	= -1;
 			if( isset($dims[$i]) ) {
@@ -586,6 +701,13 @@ class	excel2pdf
 			$this->cpos[$i]		= $w;
 			$w	+= $v;
 		}
+/* * /
+var_dump($this->csize);
+echo "<br><br><br>";
+var_dump($this->cpos);
+echo "<br><br><br>";
+exit();
+/* */
 		//行サイズ
 		$def	= $this->sheet->getDefaultRowDimension();
 		$defw	= $def->getRowHeight();
@@ -609,6 +731,7 @@ class	excel2pdf
 		$this->cells	= array();				//印刷範囲のセル情報
 		for($r=$this->sprow;$r<=$this->eprow; $r++) {
 			for($c=$this->spclm; $c<=$this->epclm; $c++) {
+				//結合済みのセル
 				if(isset($this->cells[$r][$c])) {
 					$this->cells[$r][$c]	= null;
 				}
@@ -626,7 +749,6 @@ class	excel2pdf
 						else {
 							$ec	= $this->getExcelCell($r,$c,$cell,'');
 							$this->cells[$r][$c]	= $ec;
-						//	$this->cells[$r][$c]	= null;
 						}
 					}
 					else {
@@ -658,8 +780,15 @@ class	excel2pdf
 	public function getExcelCell($r,$c,$cell,$mg)
 	{
 		$ec	= new ExcelCell();
+	//	if($cell->isFormula()) {
+	//		$pv	= $cell->getCalculatedValue();
+	//		$cell	= $cell->setCalculatedValue($pv);
+	//	}
 		
 		$val	= $cell->getFormattedValue();		//表示文字列
+	//	if($cell->isFormula()) {
+	//		$val	= $cell->getCalculatedValue();
+	//	}
 		$ec->strVal	= $val;
 		//左上座標
 		$ec->posx	= $this->cpos[$c];
@@ -671,6 +800,7 @@ class	excel2pdf
 		}
 		else {
 			$ar	= excel2pdf::area2index($mg);		//結合範囲の合計
+			//結合部分のセルを予め情報をセットしないように。。。
 			for($ci=$ar['sp'][1]; $ci<=$ar['ep'][1] ;$ci++ ) {
 				for($ri=$ar['sp'][0]; $ri<=$ar['ep'][0] ;$ri++ ) {
 					$this->cells[$ri][$ci]	= 1;	//null;

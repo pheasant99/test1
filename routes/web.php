@@ -20,3 +20,6 @@ Route::get('/', function () {
 Route::get('/', 'MainController@index');
 Route::get('/2', 'MainController@index2');
 Route::get('/3', 'MainController@index3');
+Route::get('/DL', 'MainController@indexDL');
+Route::get('/Test', 'MainController@indexTest');
+Route::get('/DOBJ', 'MainController@indexDOBJ');
