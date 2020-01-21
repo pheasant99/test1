@@ -222,7 +222,7 @@ class	excel2pdf
 		if($cell->VAlignment=='bottom')	$valign = 'B';
 		
 	//	$fill		= false;
-		if((!empty($border))||(!empty($cell->strVal))||($fill)) {
+		if((!empty($border))||($cell->strVal!='')||($fill)) {
 			//フォントの指定
 			if(strlen($cell->color)==6) {
 				$col	= '#'.$cell->color;
@@ -334,8 +334,8 @@ class	excel2pdf
 	public function drawBorder($cell,$style, $clr, $sx, $sy, $ex, $ey)
 	{
 		if($style !='none') {
-			$line['width']	= 0.2;			//
-			$line['cap']	= 'square';		//末端部：butt, round, square
+			$line['width']	= 0.4;			//
+			$line['cap']	= 'butt';		//末端部：butt, round, square
 			$line['join']	= 'miter';		//結合部：miter, round, bevel
 			$line['dash']	= '';			//on,off
 			$line['phase']	= 0;			//破線の開始位置
@@ -347,53 +347,107 @@ class	excel2pdf
 			}
 			switch($style) {
 			case \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_DASHDOT:		//一点鎖線
-				$line['dash']	= '2.0,0.5,0.5,0.5';		//on,off
+				$line['dash']	= '4.0,2.0,1.0,2.0';		//on,off
+				$line['width']	= 0.2;						//太さ 
 				break;
 			case \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_DASHDOTDOT:		//二点鎖線
-				$line['dash']	= '2.0,0.5,0.5,0.5,0.5,0.5';	//on,off
+				$line['dash']	= '4.0,2.0,1.0,2.0,1.0,2.0';	//on,off
+				$line['width']	= 0.2;						//太さ 
 				break;
 			case \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_DASHED:			//
-				$line['dash']	= '1.0,1.0';				//on,off
+				$line['dash']	= '2.0,2.0';				//on,off
+				$line['width']	= 0.2;						//太さ 
 				break;
 			case \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_DOTTED:			//
-				$line['dash']	= '0.7,0.7';				//on,off
+				$line['dash']	= '0.5,0.5';				//on,off
+				$line['width']	= 0.2;						//太さ 
 				break;
 			case \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_DOUBLE:			//二重線
-				$line['width']	= 1.5;						//太さ 
+				$line['width']	= 0.10;						//太さ 
 				break;
 			case \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_HAIR:			//
 				$line['width']	= 0.1;						//太さ 
 				break;
 			case \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_MEDIUM:			//
-				$line['width']	= 0.5;						//太さ 
+				$line['width']	= 0.4;						//太さ 
 				break;
 			case \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_MEDIUMDASHDOT:	//
-				$line['dash']	= '2.0,0.5,0.5,0.5';		//on,off
-				$line['width']	= 0.5;						//太さ 
+				$line['dash']	= '4.0,2.0,1.5,2.0';		//on,off
+				$line['width']	= 0.4;						//太さ 
 				break;
 			case \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_MEDIUMDASHDOTDOT:	//
-				$line['dash']	= '2.0,0.5,0.5,0.5,0.5,0.5';	//on,off
-				$line['width']	= 0.5;						//太さ 
+				$line['dash']	= '4.0,3.0,2.0,3.0,2.0,3.0';	//on,off
+				$line['width']	= 0.4;						//太さ 
 				break;
 			case \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_MEDIUMDASHED:		//
-				$line['dash']	= '1.5,1.0';				//on,off
-				$line['width']	= 0.5;				//太さ 
+				$line['dash']	= '3.0,1.5';				//on,off
+				$line['width']	= 0.4;						//太さ 
 				break;
 			case \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_SLANTDASHDOT:	//
+				$line['dash']	= '4.0,1.0,2.0,1.0,2.0,1.0';	//on,off
+				$line['width']	= 0.4;						//太さ 
 				//@@@@@@
 				break;
 			case \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THICK:			//
-				$line['width']	= 0.8;							//太さ 
+				$line['width']	= 0.6;							//太さ 
 				break;
 			case \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN:			//直線
 				$line['width']	= 0.2;							//太さ 
 				break;
 			}
-			//ラインを引く
-			$this->tcpdf->Line($sx, $sy, $ex, $ey,$line);
+			if($style!=\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_DOUBLE) {
+				//ラインを引く
+				$this->tcpdf->Line($sx, $sy, $ex, $ey,$line);
+			}
+			else {
+				if($sx==$ex) {		//縦線
+					$this->tcpdf->Line($sx-0.15, $sy, $ex-0.15, $ey,$line);
+					$this->tcpdf->Line($sx+0.15, $sy, $ex+0.15, $ey,$line);
+				}
+				else {				//横線
+					$this->tcpdf->Line($sx, $sy-0.15, $ex, $ey-0.15,$line);
+					$this->tcpdf->Line($sx, $sy+0.15, $ex, $ey+0.15,$line);
+				}
+			}
 		}
 	}
 	
+	//-------------------------------------------------
+	/**
+	 *	★セルの確認（デバッグ用）
+	 *	@param	$c,$r	セル位置
+	 *	@return	なし
+	 */
+	public function debugExcelCell($c,$r)
+	{
+		//セルの取得
+		$cell	= $this->sheet->getCellByColumnAndRow($c,$r,false);
+		if($cell!=null) {
+			$mg		= $cell->isMergeRangeValueCell();	//代表セル
+			$marge	= $cell->getMergeRange();			//結合範囲　　結合してなければ空
+			if($mg) {
+				$cell	= $this->getExcelCell($r,$c,$cell,$marge);
+			}
+			else {
+				$cell	= $this->getExcelCell($r,$c,$cell,'');
+			}
+			echo "<br>行：${r} カラム:${c}  marge=${mg} ${marge}";
+			echo "<br>座標　X:{$cell->posx}  Y:{$cell->posy}";
+			echo "<br>サイズX:{$cell->width}  Y:{$cell->height}";
+			echo "<br>データ　:{$cell->strVal}";
+			echo "<br>フォント:{$cell->Font}　　size:{$cell->FontSize} wrap:{$cell->wrapText} 色:{$cell->color}";
+			echo "<br>罫線 上下:{$cell->bdrtop[0]} {$cell->bdrbottom[0]}";
+			echo "<br>罫線 左右:{$cell->bdrleft[0]} {$cell->bdrright[0]}";
+			echo "<br>セル 背景:{$cell->bgcolor} {$cell->bgcolor2} {$cell->filltype}";
+			echo "<br>結合:{$cell->dwork}";
+			echo "<br>";
+		}
+		else {
+			echo "<br>行：${r} カラム:${c}  NULL";
+			echo "<br>";
+		}
+	}
+
 	//-------------------------------------------------
 	/**
 	 *	★セルの確認（デバッグ用）
@@ -411,7 +465,10 @@ class	excel2pdf
 			var_dump($this->rsize);
 		}
 		if(($r>0)&&($c>0)) {
-			$cell	= $this->cells[$r][$c];
+			$cell	= null;
+			if(isset($this->cells[$r][$c])) {
+				$cell	= $this->cells[$r][$c];
+			}
 			if(!empty($cell)) {
 				echo "<br>行：${r} カラム:${c}";
 				echo "<br>座標　X:{$cell->posx}  Y:{$cell->posy}";
@@ -741,9 +798,8 @@ exit();
 					if($cell!=null) {
 						$mg		= $cell->isMergeRangeValueCell();	//代表セル
 						$marge	= $cell->getMergeRange();			//結合範囲　　結合してなければ空
-						if(($mg==1) || empty($marge)) {				//生きているセル
+						if($mg==1) {				//生きているセル
 							$ec	= $this->getExcelCell($r,$c,$cell,$marge);
-							
 							$this->cells[$r][$c]	= $ec;
 						}
 						else {
@@ -779,6 +835,7 @@ exit();
 	 */
 	public function getExcelCell($r,$c,$cell,$mg)
 	{
+		$bb	= null;
 		$ec	= new ExcelCell();
 	//	if($cell->isFormula()) {
 	//		$pv	= $cell->getCalculatedValue();
@@ -806,6 +863,11 @@ exit();
 					$this->cells[$ri][$ci]	= 1;	//null;
 				}
 			}
+			//念のため
+			if(($c!=$ar['sp'][1])||($r!=$ar['sp'][0])) {
+				return	null;
+			}
+			
 			$w	= 0.0;
 			for($i=$ar['sp'][1]; $i<=$ar['ep'][1] ;$i++ ) {
 				$w	+= $this->csize[$i];
@@ -817,10 +879,20 @@ exit();
 				$w	+= $this->rsize[$i];
 			}
 			$ec->height	= $w;
-			//
-			if($c!=$ar['sp'][1]) {
-				return	null;
-			}
+			
+			//右下のセル
+			$celle	= $this->sheet->getCellByColumnAndRow($ar['ep'][1],$ar['ep'][0],false);
+			$stylee	= $celle->getStyle();
+			$bb	= $stylee->getBorders();
+			//★罫線
+			$k	= $bb->getBottom();			//下
+			$ec->bdrbottom[0]	= $k->getBorderStyle();
+			$ec->bdrbottom[1]	= $k->getColor()->getRGB();
+			$k	= $bb->getRight();			//右
+			$ec->bdrright[0]	= $k->getBorderStyle();
+			$ec->bdrright[1]	= $k->getColor()->getRGB();
+
+			$cell	= $this->sheet->getCellByColumnAndRow($c,$r,false);
 		}
 		
 		$style	= $cell->getStyle();
@@ -853,19 +925,22 @@ exit();
 		
 		//罫線
 		$b	= $style->getBorders();
-		$k	= $b->getTop();					//上
+		
+		$k	= $b->getTop();				//上
 		$ec->bdrtop[0]		= $k->getBorderStyle();
 		$ec->bdrtop[1]		= $k->getColor()->getRGB();
-		$k	= $b->getBottom();			//下
-		$ec->bdrbottom[0]	= $k->getBorderStyle();
-		$ec->bdrbottom[1]	= $k->getColor()->getRGB();
 		$k	= $b->getLeft();			//左
 		$ec->bdrleft[0]		= $k->getBorderStyle();
 		$ec->bdrleft[1]		= $k->getColor()->getRGB();
-		$k	= $b->getRight();			//右
-		$ec->bdrright[0]	= $k->getBorderStyle();
-		$ec->bdrright[1]	= $k->getColor()->getRGB();
 		
+		if(empty($bb)) {
+			$k	= $b->getBottom();			//下
+			$ec->bdrbottom[0]	= $k->getBorderStyle();
+			$ec->bdrbottom[1]	= $k->getColor()->getRGB();
+			$k	= $b->getRight();			//右
+			$ec->bdrright[0]	= $k->getBorderStyle();
+			$ec->bdrright[1]	= $k->getColor()->getRGB();
+		}
 		return	$ec;
 	}
 	

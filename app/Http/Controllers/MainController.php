@@ -14,8 +14,9 @@ class MainController extends Controller
 	public function index()
 	{
 		$ex	=new excel2pdf();
-		$fname	= '..\storage\app\public/001_納品書_タテ型.xlsx';
+	//	$fname	= '..\storage\app\public/001_納品書_タテ型.xlsx';
 	//	$fname	= '..\storage\app\public/test.xlsx';
+		$fname	= '..\storage\app\public/test__.xlsx';
 /*		ブックを読み込んでセット	*  /
 		$reader	= new \PhpOffice\PhpSpreadsheet\Reader\Xlsx();
 	//	$reader	= new \PhpOffice\PhpSpreadsheet\Reader\Xls();
@@ -37,11 +38,6 @@ class MainController extends Controller
 		$cw[7]	=  28 * 1.1;
 		$cw[8]	= 175 * 1.1;
 */
-		for($i=1;$i<20;$i++) {
-//			$cw[$i]	= 175;				//px
-//			$cw[$i]	= 19.5;//25.4;		//mm
-			$cw[$i]	= 11.0;				//mm
-		}
 //		$ex->setColumnWidthsPx($cw);
 //		$ex->setColumnWidthsmm($cw);
 //		$ex->setColumnWidthsmm( 11.0, 20 );
@@ -52,26 +48,58 @@ class MainController extends Controller
 		//	$sheet = $book->getSheet(0);
 			$sheet = $ex->getSheet();
 			//セルに値をセットしてみる（自動計算されるか）
-			$sheet->setCellValue('B18', 'まつもと');
-			$sheet->setCellValue('J18', 15);		//数量
-			$sheet->setCellValue('L18', 1200);		//単価
+			$sheet->setCellValue('A18', 'まつもと');
+			$sheet->setCellValue('D18', 15);		//数量
+			$sheet->setCellValue('E18', 1200);		//単価
 			//
-			$sheet->setCellValue('B19', 'あいうえお');
-			$sheet->setCellValue('J19', 4);			//数量
-			$sheet->setCellValue('L19', 100);		//単価
+			$sheet->setCellValue('A19', 'あいうえお');
+			$sheet->setCellValue('D19', 4);			//数量
+			$sheet->setCellValue('E19', 100);		//単価
 		}
 		
-	//	$sheet	= $ex->getSheet();
+		$sheet	= $ex->getSheet();
 		if($sheet != null) {
 			$ex->setSheet($sheet);
 			
 			$ex->writePDF();		//PDF出力・・・この後 exit()?
 			
-		/*	セルの情報をダンプ	*  /
-			$ex->debugCell(0,0);		//カラム幅、行高さの出力
-		/*	デバッグ用	*  /
-			for($r=1;$r<27;$r++) {
-				for($c=1;$c<18;$c++) {
+		/*	セルの情報をダンプ	*/
+		//	$ex->debugCell(0,0);		//カラム幅、行高さの出力
+		//--------
+	/*		$ex->debugExcelCell( 1, 1);
+			$ex->debugExcelCell( 2, 1);
+			$ex->debugExcelCell( 3, 1);
+			$ex->debugExcelCell( 1, 2);
+			$ex->debugExcelCell( 2, 2);
+			$ex->debugExcelCell( 3, 2);
+	*/
+	/*	* /
+			$ex->debugExcelCell( 1,30);
+			$ex->debugExcelCell( 9,30);
+			$ex->debugExcelCell( 1,34);
+			$ex->debugExcelCell( 9,34);
+	/*	*/	//
+	//		$ex->debugExcelCell( 1, 2);
+	//		$ex->debugExcelCell( 1, 3);
+			$ex->debugCell( 2, 2);
+			$ex->debugCell( 2, 3);
+			$ex->debugCell( 2, 4);
+			$ex->debugCell( 2, 5);
+			$ex->debugCell( 2, 6);
+			$ex->debugCell( 2, 7);
+			$ex->debugCell( 2, 8);
+
+			$ex->debugCell( 4, 2);
+			$ex->debugCell( 4, 3);
+			$ex->debugCell( 4, 4);
+			$ex->debugCell( 4, 5);
+			$ex->debugCell( 4, 6);
+			$ex->debugCell( 4, 7);
+			$ex->debugCell( 4, 8);
+	//		$ex->debugCell( 1, 4);
+		/*	デバッグ用	* /
+			for($r=30;$r<35;$r++) {
+				for($c=1;$c<10;$c++) {
 					$ex->debugCell($c,$r);
 				}
 			}
