@@ -15,8 +15,9 @@ class MainController extends Controller
 	{
 		$ex	=new excel2pdf();
 	//	$fname	= '..\storage\app\public/001_納品書_タテ型.xlsx';
-	//	$fname	= '..\storage\app\public/test.xlsx';
-		$fname	= '..\storage\app\public/test__.xlsx';
+		$fname	= '..\storage\app\public/test.xlsx';
+	//	$fname	= '..\storage\app\public/test__.xlsx';
+	//	$fname	= '..\storage\app\public/test.xls';
 /*		ブックを読み込んでセット	*  /
 		$reader	= new \PhpOffice\PhpSpreadsheet\Reader\Xlsx();
 	//	$reader	= new \PhpOffice\PhpSpreadsheet\Reader\Xls();

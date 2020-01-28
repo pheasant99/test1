@@ -252,8 +252,26 @@ class	excel2pdf
 			if($cell->shrinkToFit) {
 				$stretch	= 1;
 			}
+			
 			$this->tcpdf->SetXY( $posx, $posy, true);
 			$this->tcpdf->SetFont($fntnm,$style,$fntsiz);
+			if(empty($cell->wrapText) ) {
+				//ボックス（セル）の描画
+				$strVal = $cell->strVal;
+				if($align == 'L') $strVal = str_repeat('  ', $cell->indent) . $cell->strVal;
+				if($align == 'R') $strVal = $cell->strVal . str_repeat('  ', $cell->indent);
+				$this->tcpdf->Cell( $width, $height, $strVal,		//サイズ、文字列
+										'',  $stretch, $align, $fill, '', $stretch, true, 'T', $valign );
+					//				$border, $stretch, $align, $fill, '', $stretch, true, 'T', $valign );
+			}
+			else {
+				//マルチライン
+				$this->tcpdf->MultiCell( $width, $height, $cell->strVal,		//サイズ、文字列
+										'',	 $align, $fill, 0, $posx, $posy,
+					//				$border, $align, $fill, 0, $posx, $posy,
+									true, $stretch, false, true, 0, $valign, false );
+			}
+
 			//罫線を別に描画する
 			if(!empty($border)) {
 				$this->drawBorder($cell, $cell->bdrtop[0], $cell->bdrtop[1],			//上
@@ -265,20 +283,6 @@ class	excel2pdf
 				$this->drawBorder($cell, $cell->bdrright[0], $cell->bdrright[1],		//右
 									$posx+$width, $posy, $posx+$width, $posy+$height);
 				$border	= '';
-			}
-			if(empty($cell->wrapText) ) {
-				//ボックス（セル）の描画
-				$strVal = $cell->strVal;
-				if($align == 'L') $strVal = str_repeat('  ', $cell->indent) . $cell->strVal;
-				if($align == 'R') $strVal = $cell->strVal . str_repeat('  ', $cell->indent);
-				$this->tcpdf->Cell( $width, $height, $strVal,		//サイズ、文字列
-									$border, $stretch, $align, $fill, '', $stretch, true, 'T', $valign );
-			}
-			else {
-				//マルチライン
-				$this->tcpdf->MultiCell( $width, $height, $cell->strVal,		//サイズ、文字列
-									$border, $align, $fill, 0, $posx, $posy,
-									true, $stretch, false, true, 0, $valign, false );
 			}
 		}
 	}
